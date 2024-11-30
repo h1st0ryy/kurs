@@ -96,6 +96,32 @@ public class JwtTokenProvider {
         return getRolesFromToken(token);
     }
 
+    public String getEmailFromRequest(HttpServletRequest request) {
+        // Извлекаем токен из запроса
+        String token = resolveToken(request);
+
+        // Если токен не найден, выбрасываем исключение или возвращаем пустой набор
+        if (token == null) {
+            throw new IllegalArgumentException("Токен не найден в запросе");
+        }
+
+        // Декодируем и извлекаем роли из токена
+        return getEmailFromToken(token);
+    }
+
+    public String getEmailFromToken(String token)
+    {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey()) // Используем секретный ключ для проверки подписи
+                .build()
+                .parseClaimsJws(token) // Разбираем токен
+                .getBody(); // Извлекаем тело (claims)
+
+        String email = claims.getSubject();
+
+        return email;
+
+    }
     public Set<String> getRolesFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey()) // Используем секретный ключ для проверки подписи

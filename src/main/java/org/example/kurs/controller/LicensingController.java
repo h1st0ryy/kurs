@@ -24,6 +24,9 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+//TODO: 1. Не сохранять тикеты
+//TODO: 2. Добавить CRUD для Device, Product, LicenseType
+
 @RestController
 @RequestMapping("/licensing")
 @RequiredArgsConstructor
@@ -94,8 +97,9 @@ public class LicensingController {
             newLicense.setCode(generateActivationCode());  // Генерация активационного кода
             logger.info("Активационный код сгенерирован: {}", newLicense.getCode());
 
+            //TODO: 1. Пересмотреть логику установки UserId
+
             // Устанавливаем пользователя (user_id)
-            newLicense.setUser(owner);  // Предположим, что пользователь и владелец — одно и то же лицо
             newLicense.setOwner(owner);  // Устанавливаем владельца лицензии (owner_id)
             newLicense.setProduct(product);  // Устанавливаем продукт (product_id)
             newLicense.setLicenseType(licenseType);  // Устанавливаем тип лицензии (type_id)
@@ -157,6 +161,11 @@ public class LicensingController {
             License license = licenseRepository.findByCode(requestData.getCode())
                     .orElseThrow(() -> new IllegalArgumentException("Недействительный ключ лицензии"));
             logger.info("Лицензия с кодом {} найдена", requestData.getCode());
+
+            if (equals(license.getUser().getId())) {
+                logger.error("Ошибка: пользователь не является владельцем лицензии");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Ошибка: пользователь не является владельцем лицензии");
+            }
 
             // 4. Проверка возможности продления
             if (license.getBlocked()) {
@@ -388,7 +397,8 @@ public class LicensingController {
     @PostMapping("/activation")
     public ResponseEntity<?> activateLicense(HttpServletRequest request, @RequestBody LicenseActivationRequest activationRequest) {
         Logger logger = LoggerFactory.getLogger(getClass());
-
+        //TODO: проверить существование устройства, проверка доступа к лицензии
+        // по счетчику
         try {
             // 1. Извлекаем роли из токена
             Set<String> roles = jwtTokenProvider.getRolesFromRequest(request);
@@ -406,9 +416,17 @@ public class LicensingController {
             // 3. Регистрация или обновление устройства
             Optional<Device> deviceOptional = deviceRepository.findByMacAddressAndName(activationRequest.getMacAddress(), activationRequest.getDeviceName());
             Device device;
+
+            Optional<Device> existingDevice = deviceRepository.findByMacAddressAndName(activationRequest.getMacAddress(), activationRequest.getDeviceName());
+            if (existingDevice.isPresent()) {
+                logger.error("Устройство с MAC-адресом {} и именем {} уже существует", activationRequest.getMacAddress(), activationRequest.getDeviceName());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Устройство с таким MAC-адресом и именем уже существует");
+            }
+
             if (deviceOptional.isPresent()) {
                 device = deviceOptional.get();
                 logger.info("Устройство найдено: {}", device);
+
             } else {
                 // Если устройство не найдено, регистрируем его
                 device = new Device();
@@ -425,6 +443,17 @@ public class LicensingController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Лицензия не найдена");
             }
             logger.info("Лицензия с кодом {} найдена", activationRequest.getCode());
+
+            String email = jwtTokenProvider.getEmailFromRequest(request);
+            Optional<ApplicationUser> userOptional = applicationUserRepository.findByEmail(email);
+            ApplicationUser user = userOptional.get();
+            if (license.getUser() != null) {
+                if (!license.getUser().getEmail().equals(email)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка");
+                }
+            } else {
+                license.setUser(user);
+            }
 
             // 5. Проверка доступных мест для активации устройства на лицензии
             if (license.getDeviceCount() <= 0) {
