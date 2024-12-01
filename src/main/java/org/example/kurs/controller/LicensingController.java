@@ -39,7 +39,6 @@ public class LicensingController {
     private final LicenseRepository licenseRepository;
     private final DeviceLicenseRepository deviceLicenseRepository;
     private final LicenseHistoryService licenseHistoryService;
-    private final TicketRepository ticketRepository;
     private final DeviceRepository deviceRepository;
 
     // Метод для преобразования LocalDate в Date
@@ -178,9 +177,6 @@ public class LicensingController {
                 // Логируем тикет
                 logger.info("Тикет: {}", ticket);
 
-                // Добавляем тикет в базу данных
-                ticketRepository.save(ticket);
-
                 // Отправляем ответ с тикетом
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Лицензия заблокирована, продление невозможно.");
             }
@@ -195,8 +191,6 @@ public class LicensingController {
                 // Логируем тикет
                 logger.info("Тикет: {}", ticket);
 
-                // Добавляем тикет в базу данных
-                ticketRepository.save(ticket);
 
                 // Отправляем ответ с тикетом
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Лицензия истекла, продление невозможно.");
@@ -223,8 +217,6 @@ public class LicensingController {
                 // Логируем тикет
                 logger.info("Тикет: {}", ticket);
 
-                // Добавляем тикет в базу данных
-                ticketRepository.save(ticket);
 
                 // Отправляем ответ с тикетом
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -268,9 +260,6 @@ public class LicensingController {
             // Логируем тикет
             logger.info("Тикет: {}", ticket);
 
-            // Добавляем тикет в базу данных
-            ticketRepository.save(ticket);
-
             // Отправляем ответ с текстом сообщения (разделяем на две строки)
             return ResponseEntity.status(HttpStatus.OK).body(deviceMessage + "\nЛицензия продлена до: " + newExpirationDate);
 
@@ -287,9 +276,6 @@ public class LicensingController {
             // Логируем тикет
             logger.info("Тикет: {}", ticket);
 
-            // Добавляем тикет в базу данных
-            ticketRepository.save(ticket);
-
             // Отправляем ответ с тикетом
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Недействительный ключ лицензии.");
         } catch (Exception e) {
@@ -301,9 +287,6 @@ public class LicensingController {
 
             // Логируем тикет
             logger.info("Тикет: {}", ticket);
-
-            // Добавляем тикет в базу данных
-            ticketRepository.save(ticket);
 
             // Отправляем ответ с тикетом
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Произошла ошибка при продлении лицензии.");
@@ -369,8 +352,6 @@ public class LicensingController {
 
                 logger.info("Тикет с подтверждением лицензии: {}", ticket);
 
-                // Логика для сохранения тикета или дальнейшей обработки
-                ticketRepository.save(ticket);
                 // Отправляем ответ с тикетом
                 return ResponseEntity.status(HttpStatus.OK).body("Лицензия активирована на устройстве. Тикет: " + ticket.getId());
 
@@ -379,16 +360,14 @@ public class LicensingController {
                 logger.error("Лицензия с ID {} не найдена", deviceLicense.getLicenseId());
                 // Создаем тикет с ошибкой
                 Ticket ticket = Ticket.createTicket(null, true, null);
-                ticketRepository.save(ticket);
-                // Возвращаем ошибку или другое поведение
                 // Отправляем ответ с тикетом
-                return ResponseEntity.status(HttpStatus.OK).body("Лицензия активирована на устройстве. Тикет: " + ticket.getId());
+                return ResponseEntity.status(HttpStatus.OK).body("Лицензия активирована на устройстве. Тикет: " + ticket);
             }
 
         } catch (Exception e) {
             logger.error("Произошла ошибка при проверке лицензии: {}", e.getMessage());
             Ticket ticket = Ticket.createTicket(null, false, null);  // Ошибка без данных лицензии
-            ticketRepository.save(ticket);
+            logger.info("Тикет с ошибкой: {}", ticket);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Произошла ошибка при проверке лицензии.");
         }
     }
@@ -490,7 +469,6 @@ public class LicensingController {
 
             // 10. Создаем тикет для успешной активации
             Ticket ticket = Ticket.createTicket(null, false, license.getEndingDate());
-            ticketRepository.save(ticket);
             logger.info("Тикет с подтверждением активации лицензии создан: {}", ticket);
 
             return ResponseEntity.status(HttpStatus.OK).body("Лицензия успешно активирована на устройстве");
@@ -499,7 +477,7 @@ public class LicensingController {
             logger.error("Произошла ошибка при активации лицензии: {}", e.getMessage(), e);
             // Создаем тикет с ошибкой
             Ticket ticket = Ticket.createTicket(null, true, null);
-            ticketRepository.save(ticket);
+            logger.info("Тикет с ошибкой: {}", ticket);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Произошла ошибка при активации лицензии");
         }
     }

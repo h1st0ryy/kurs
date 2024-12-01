@@ -7,7 +7,7 @@ import java.util.Optional;
 public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     // Метод для поиска устройства по MAC-адресу, имени и ID пользователя
-    Optional<Device> findByMacAddressAndNameAndUserId(String macAddress, String deviceName, Long userId);
+    Device findByMacAddress(String macAddress);
     // Поиск устройства по MAC-адресу и имени
     Optional<Device> findByMacAddressAndName(String macAddress, String deviceName);
 }

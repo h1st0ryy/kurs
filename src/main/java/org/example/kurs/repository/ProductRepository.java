@@ -11,6 +11,4 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Метод для поиска продукта по ID
     Optional<Product> findById(Long id);
 
-    // Метод для поиска всех продуктов, которые не заблокированы
-    List<Product> findByIsBlockedFalse();
 }
