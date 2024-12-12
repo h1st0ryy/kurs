@@ -392,6 +392,26 @@ public class LicensingController {
             Optional<License> licenseOptional = licenseRepository.findByCode(activationRequest.getCode());
             License license = licenseOptional.get();
 
+
+
+            // 4. Проверка лицензии по коду;
+            if (!licenseOptional.isPresent()) {
+                logger.error("Лицензия с кодом {} не найдена", activationRequest.getCode());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Лицензия не найдена");
+            }
+            logger.info("Лицензия с кодом {} найдена", activationRequest.getCode());
+
+            String email = jwtTokenProvider.getEmailFromRequest(request);
+            Optional<ApplicationUser> userOptional = applicationUserRepository.findByEmail(email);
+            ApplicationUser user = userOptional.get();
+            if (license.getUser() != null) {
+                if (!license.getUser().getEmail().equals(email)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка");
+                }
+            } else {
+                license.setUser(user);
+            }
+
             // 3. Регистрация или обновление устройства
             Optional<Device> deviceOptional = deviceRepository.findByMacAddressAndName(activationRequest.getMacAddress(), activationRequest.getDeviceName());
             Device device;
@@ -414,24 +434,6 @@ public class LicensingController {
                 device.setUserId(license.getUser().getId());
                 deviceRepository.save(device);
                 logger.info("Устройство с MAC-адресом {} и именем {} зарегистрировано", activationRequest.getMacAddress(), activationRequest.getDeviceName());
-            }
-
-            // 4. Проверка лицензии по коду;
-            if (!licenseOptional.isPresent()) {
-                logger.error("Лицензия с кодом {} не найдена", activationRequest.getCode());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Лицензия не найдена");
-            }
-            logger.info("Лицензия с кодом {} найдена", activationRequest.getCode());
-
-            String email = jwtTokenProvider.getEmailFromRequest(request);
-            Optional<ApplicationUser> userOptional = applicationUserRepository.findByEmail(email);
-            ApplicationUser user = userOptional.get();
-            if (license.getUser() != null) {
-                if (!license.getUser().getEmail().equals(email)) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка");
-                }
-            } else {
-                license.setUser(user);
             }
 
             // 5. Проверка доступных мест для активации устройства на лицензии

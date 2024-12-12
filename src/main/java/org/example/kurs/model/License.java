@@ -25,7 +25,7 @@ public class License {
     private String code;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = true)
     private ApplicationUser user;  // Ссылка на владельца/пользователя, кому принадлежит лицензия
 
     @ManyToOne
